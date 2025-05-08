@@ -1,0 +1,9 @@
+.dish-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 15px;
+  overflow-y: auto;
+  flex: 1;
+  background-color: #fff;
+}
