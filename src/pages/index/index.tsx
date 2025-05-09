@@ -5,43 +5,78 @@ import Header from '../../components/Header'
 import CategoryList from '../../components/CategoryList'
 import DishList from '../../components/DishList'
 import TabBar from '../../components/TabBar'
+import { getCombineInfo, Category, Dish, Menu } from '../../services/menuService'
 import './index.scss'
 
-// 模拟数据
-const mockCategories = [
-  { id: 'stir_fry', name: '炒菜' },
-  { id: 'noodle', name: '面食' },
-  { id: 'soup', name: '汤' },
-  { id: 'hot_pot', name: '火锅' },
-  { id: 'select_5', name: '选项 5' },
-  { id: 'select_6', name: '选项 6' },
-  { id: 'select_7', name: '选项 7' },
-  { id: 'select_8', name: '选项 8' },
-  { id: 'select_9', name: '选项 9' },
-  { id: 'select_10', name: '选项 10' },
-  { id: 'select_11', name: '选项 11' },
-]
+// 将Category接口转换为CategoryList组件需要的格式
+const convertCategories = (categories: Category[]) => {
+  return categories.map((category) => ({
+    id: category.name, // 使用分类名称作为ID
+    name: category.name
+  }))
+}
 
-const mockDishes = [
-  { id: 1, name: '辣椒炒肉', image: '' },
-  { id: 2, name: '辣椒炒肉', image: '' },
-  { id: 3, name: '辣椒炒肉', image: '' },
-  { id: 4, name: '辣椒炒肉', image: '' },
-  { id: 5, name: '辣椒炒肉', image: '' },
-  { id: 6, name: '辣椒炒肉', image: '' },
-  { id: 7, name: '辣椒炒肉', image: '' },
-  { id: 8, name: '辣椒炒肉', image: '' },
-]
+// 将Dish接口转换为DishList组件需要的格式
+const convertDishes = (dishes: Dish[], categoryName: string) => {
+  return dishes
+    .filter(dish => dish.categoryName === categoryName)
+    .map((dish, index) => ({
+      id: index + 1, // 使用索引作为临时ID
+      name: dish.name,
+      image: dish.image || ''
+    }))
+}
 
 export default function Index () {
-  const [activeCategory, setActiveCategory] = useState<string | number>('stir_fry')
+  // 状态定义
+  const [menuInfo, setMenuInfo] = useState<Menu>({ id: 1, name: '家庭菜单', image: '' })
+  const [categories, setCategories] = useState<{id: string | number; name: string}[]>([])
+  const [dishes, setDishes] = useState<{id: string | number; name: string; image?: string}[]>([])
+  const [activeCategory, setActiveCategory] = useState<string | number>('')
+  const [allDishes, setAllDishes] = useState<Dish[]>([])
   
+  // 页面加载时获取数据
   useLoad(() => {
-    console.log('Page loaded.')
+    // 调用getCombineInfo获取数据
+    const combineInfo = getCombineInfo(0)
+    
+    // 设置菜单信息
+    // 等待异步结果后再设置菜单信息
+    combineInfo.then(info => {
+      setMenuInfo(info.menu)
+    })
+    
+    // 转换并设置分类列表
+    combineInfo.then(info => {
+      const formattedCategories = convertCategories(info.categories)
+      setCategories(formattedCategories)
+      
+      // 默认选择第一个分类
+      if (formattedCategories.length > 0) {
+        const firstCategory = formattedCategories[0].id
+        setActiveCategory(firstCategory)
+        
+        // 根据选中的分类筛选菜品
+        const firstCategoryName = info.categories[0].name
+        const filteredDishes = convertDishes(info.dishes, firstCategoryName)
+        setDishes(filteredDishes)
+      }
+    })
+    // 保存所有菜品数据
+    combineInfo.then(info => {
+      setAllDishes(info.dishes)
+    })
   })
 
   const handleCategoryClick = (categoryId: string | number) => {
     setActiveCategory(categoryId)
+    
+    // 根据选中的分类筛选菜品
+    const selectedCategoryName = categories.find(c => c.id === categoryId)?.name || ''
+    if (selectedCategoryName) {
+      const filteredDishes = convertDishes(allDishes, selectedCategoryName)
+      setDishes(filteredDishes)
+    }
   }
 
   const handleAddDish = (dishId: string | number) => {
@@ -49,7 +84,7 @@ export default function Index () {
     // 获取当前菜篮子中的菜品
     const cartItems = Taro.getStorageSync('cartItems') || []
     // 查找要添加的菜品
-    const dishToAdd = mockDishes.find(dish => dish.id === dishId)
+    const dishToAdd = dishes.find(dish => dish.id === dishId)
     if (dishToAdd) {
       // 检查是否已经在菜篮子中
       const isExist = cartItems.some(item => item.id === dishId)
@@ -74,16 +109,23 @@ export default function Index () {
 
   const handleAddNewDish = () => {
     console.log('跳转到菜品添加页面')
-    // 这里可以
+    // 传递当前选中的分类信息和所有分类数据到添加菜品页面
+    const selectedCategoryName = categories.find(c => c.id === activeCategory)?.name || ''
+    const categoriesNames = categories.map(c => c.name)
     Taro.navigateTo({
-      url: '../addDish/index'
+      url: `../addDish/index?categoryName=${encodeURIComponent(selectedCategoryName)}&categories=${encodeURIComponent(JSON.stringify(categoriesNames))}`
     })
   }
 
   const handleManageCategories = () => {
     console.log('管理分类')
+    // 传递当前分类数据到分类管理页面
     Taro.navigateTo({
-      url: '/pages/categoryManage/index'
+      url: '/pages/categoryManage/index',
+      success: function(res) {
+        // 将当前分类数据传递给打开的页面
+        res.eventChannel.emit('acceptCategories', { categories })
+      }
     })
   }
 
@@ -99,18 +141,19 @@ export default function Index () {
   return (
     <View className='menu-page'>
       <Header 
-        menuName='放学嗨家庭菜单' 
+        menuName={menuInfo.name} 
+        menuImage={menuInfo.image}
         onAddClick={handleAddNewDish} 
       />
       <View className='menu-page__content'>
         <CategoryList 
-          categories={mockCategories}
+          categories={categories}
           activeCategory={activeCategory}
           onCategoryClick={handleCategoryClick}
           onManageClick={handleManageCategories}
         />
         <DishList 
-          dishes={mockDishes}
+          dishes={dishes}
           onAddClick={handleAddDish}
         />
       </View>

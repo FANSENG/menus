@@ -13,7 +13,14 @@ const Header: FC<HeaderProps> = ({ menuName, menuImage, onAddClick }) => {
   return (
     <View className='menu-header'>
       <View className='menu-header__left'>
-        <View className='menu-header__image-container' onClick={() => Taro.navigateTo({ url: '/pages/menuEdit/index' })}>
+        <View className='menu-header__image-container' onClick={() => Taro.navigateTo({
+          url: '/pages/menuEdit/index',
+          success: function(res) {
+            // 将当前菜单信息传递给菜单编辑页面
+            res.eventChannel.emit('acceptMenuInfo', { menuName, menuImage })
+          }
+        })}
+        >
           {menuImage ? (
             <Image className='menu-header__image' src={menuImage} mode='aspectFill' />
           ) : (

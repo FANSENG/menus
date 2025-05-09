@@ -1,11 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image, Input, Button } from '@tarojs/components'
+import { View, Text, Image, Input, Button, Picker } from '@tarojs/components'
 import './index.scss'
 
 export default function AddDish() {
   const [dishName, setDishName] = useState('')
   const [dishImage, setDishImage] = useState('')
+  const [categoryName, setCategoryName] = useState('')
+  const [categories, setCategories] = useState<string[]>([])
+  
+  // 获取路由参数和分类数据
+  useEffect(() => {
+    const router = Taro.getCurrentInstance().router
+    if (router && router.params) {
+      // 从路由参数获取分类数据
+      if (router.params.categories) {
+        setCategories(JSON.parse(decodeURIComponent(router.params.categories)))
+      }
+      // 从路由参数获取默认选中的分类
+      if (router.params.categoryName) {
+        setCategoryName(decodeURIComponent(router.params.categoryName))
+      }
+    }
+  }, [])
 
   // 选择本地图片
   const handleChooseImage = () => {
@@ -58,9 +75,9 @@ export default function AddDish() {
     }
 
     // 这里预留保存菜品的接口调用
-    // 参数：菜品名称、图片
+    // 参数：菜品名称、图片、分类名称
     // 返回：保存结果
-    console.log('保存菜品信息', { dishName, dishImage })
+    console.log('保存菜品信息', { dishName, dishImage, categoryName })
     
     // 保存成功后返回上一页
     Taro.navigateBack()
@@ -69,6 +86,19 @@ export default function AddDish() {
   return (
     <View className='add-dish'>
       <View className='add-dish__content'>
+        <View className='add-dish__form-item'>
+          <Text className='add-dish__label'>分类</Text>
+          <Picker 
+            mode='selector' 
+            range={categories}
+            onChange={(e) => setCategoryName(categories[e.detail.value])}
+            value={categories.indexOf(categoryName)}
+          >
+            <View className='add-dish__picker'>
+              {categoryName || '请选择分类'}
+            </View>
+          </Picker>
+        </View>
         <View className='add-dish__form-item'>
           <Text className='add-dish__label'>菜名</Text>
           <Input

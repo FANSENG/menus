@@ -14,19 +14,29 @@ const CategoryManage: FC = () => {
 
   // 初始化加载分类数据
   useEffect(() => {
-    // 这里应该从API或本地存储获取分类数据
-    // 模拟数据
-    const mockCategories: Category[] = [
-      { id: '1', name: '炒菜' },
-      { id: '2', name: '汤' },
-      { id: '3', name: '主食' },
-      { id: '4', name: '面食' },
-      { id: '5', name: '火锅' },
-      { id: '6', name: '粥' },
-      { id: '7', name: '凉菜' },
-      { id: '8', name: '其他' } // 特殊类别，不可删除
-    ]
-    setCategories(mockCategories)
+    // 从上一页接收传递的分类数据
+    const instance = Taro.getCurrentInstance()
+    const eventChannel = instance?.page?.getOpenerEventChannel?.()
+    if (eventChannel) {
+      eventChannel.on('acceptCategories', (data) => {
+        if (data && data.categories && data.categories.length > 0) {
+          setCategories(data.categories)
+        } else {
+          // 如果没有接收到数据，则使用默认分类
+          const defaultCategories: Category[] = [
+            { id: '1', name: '炒菜' },
+            { id: '2', name: '汤' },
+            { id: '3', name: '主食' },
+            { id: '4', name: '面食' },
+            { id: '5', name: '火锅' },
+            { id: '6', name: '粥' },
+            { id: '7', name: '凉菜' },
+            { id: '8', name: '其他' } // 特殊类别，不可删除
+          ]
+          setCategories(defaultCategories)
+        }
+      })
+    }
   }, [])
 
   // 上移类别

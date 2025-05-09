@@ -1,11 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, Input, Button } from '@tarojs/components'
 import './index.scss'
 
 export default function MenuEdit() {
-  const [menuName, setMenuName] = useState('放学嗨家庭菜单')
+  const [menuName, setMenuName] = useState('')
   const [menuImage, setMenuImage] = useState('')
+  
+  // 接收从主页传递的菜单信息
+  useEffect(() => {
+    const instance = Taro.getCurrentInstance()
+    const eventChannel = instance?.page?.getOpenerEventChannel?.()
+    if (eventChannel) {
+      eventChannel.on('acceptMenuInfo', (data) => {
+        if (data) {
+          setMenuName(data.menuName || '')
+          setMenuImage(data.menuImage || '')
+        }
+      })
+    }
+  }, [])
 
   // 选择图片
   const handleChooseImage = () => {
@@ -30,7 +44,12 @@ export default function MenuEdit() {
 
   // 跳转到添加菜品页面
   const handleAddDish = () => {
-    console.log('添加菜品')
+    const instance = Taro.getCurrentInstance()
+    const menuId = instance?.router?.params?.id
+    
+    Taro.navigateTo({
+      url: `/pages/dishEdit/index?menuId=${menuId || ''}`
+    })
   }
 
   return (

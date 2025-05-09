@@ -17,14 +17,17 @@ const DishItem: FC<DishItemProps> = ({ id, name, image, onAddClick }) => {
 
   const handleImageClick = () => {
     // 跳转到菜品详情页面，并传递菜品信息
-    let url = `/pages/dishDetail/index?id=${id}&name=${encodeURIComponent(name)}`
-    
-    // 只有当image存在且不为空时才添加到URL中
-    if (image && image.trim() !== '') {
-      url += `&image=${encodeURIComponent(image)}`
-    }
-    
-    Taro.navigateTo({ url })
+    Taro.navigateTo({
+      url: `/pages/dishDetail/index`,
+      success: function(res) {
+        // 将完整的菜品信息传递给菜品详情页面
+        res.eventChannel.emit('acceptDishInfo', {
+          id,
+          name,
+          image: image || ''
+        })
+      }
+    })
   }
 
   return (

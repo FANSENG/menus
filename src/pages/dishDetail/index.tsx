@@ -14,12 +14,28 @@ const DishDetailPage: FC = () => {
   const [dish, setDish] = useState<DishDetail | null>(null)
 
   useEffect(() => {
+    // 首先尝试从URL参数获取数据（兼容旧版本）
     const { id, name, image } = router.params
     if (id) {
       setDish({
         id,
         name: name || '',
         image: image || ''
+      })
+    }
+    
+    // 从上一页接收传递的菜品信息（新版本）
+    const instance = Taro.getCurrentInstance()
+    const eventChannel = instance?.page?.getOpenerEventChannel?.()
+    if (eventChannel) {
+      eventChannel.on('acceptDishInfo', (data) => {
+        if (data && data.id) {
+          setDish({
+            id: data.id,
+            name: data.name || '',
+            image: data.image || ''
+          })
+        }
       })
     }
   }, [router.params])
