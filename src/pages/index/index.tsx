@@ -41,46 +41,59 @@ export default function Index () {
   const [menuInfo, setMenuInfo] = useState<Menu>({ id: 1, name: '家庭菜单', image: '' })
   const [categories, setCategories] = useState<{id: string | number; name: string}[]>([])
   const [dishes, setDishes] = useState<{id: string | number; name: string; image?: string}[]>([])
-  const [activeCategory, setActiveCategory] = useState<string | number>('')
+  const [activeCategory, setActiveCategory] = useState<string>('')
   const [allDishes, setAllDishes] = useState<Dish[]>([])
+  
+  // 加载数据的函数
+  const loadData = async () => {
+    try {
+      // 调用getCombineInfo获取数据
+      const info = await getCombineInfo(1);
+      
+      // 设置菜单信息
+      setMenuInfo(info.menu);
+      
+      // 转换并设置分类列表
+      const formattedCategories = convertCategories(info.categories);
+      setCategories(formattedCategories);
+      
+      // 保存所有菜品数据
+      setAllDishes(info.dishes);
+      
+      // 默认选择第一个分类或保持当前选中的分类
+      const categoryToSelect = activeCategory || (formattedCategories.length > 0 ? formattedCategories[0].id : '');
+      if (categoryToSelect) {
+        setActiveCategory(categoryToSelect);
+        
+        // 根据选中的分类筛选菜品
+        const selectedCategoryName = formattedCategories.find(c => c.id === categoryToSelect)?.name || categoryToSelect;
+        const filteredDishes = convertDishes(info.dishes, selectedCategoryName);
+        setDishes(filteredDishes);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      Taro.showToast({
+        title: '加载数据失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  };
   
   // 页面加载时获取数据
   useLoad(() => {
-    // 调用getCombineInfo获取数据
-    const combineInfo = getCombineInfo(1)
+    loadData();
     
-    // 设置菜单信息
-    // 等待异步结果后再设置菜单信息
-    combineInfo.then(info => {
-      setMenuInfo(info.menu)
-    })
+    // 监听菜品数据变化事件
+    Taro.eventCenter.on('dishDataChanged', loadData);
     
-    // 转换并设置分类列表
-    combineInfo.then(info => {
-      const formattedCategories = convertCategories(info.categories)
-      setCategories(formattedCategories)
-      
-      // 默认选择第一个分类
-      if (formattedCategories.length > 0) {
-        const firstCategory = formattedCategories[0].id
-        setActiveCategory(firstCategory)
-        
-        // 根据选中的分类筛选菜品
-        // 获取第一个分类名称，处理字符串数组或对象数组的情况
-        const firstCategoryName = typeof info.categories[0] === 'string' 
-          ? info.categories[0] 
-          : (info.categories[0] as Category).name
-        const filteredDishes = convertDishes(info.dishes, firstCategoryName)
-        setDishes(filteredDishes)
-      }
-    })
-    // 保存所有菜品数据
-    combineInfo.then(info => {
-      setAllDishes(info.dishes)
-    })
+    // 组件卸载时移除事件监听
+    return () => {
+      Taro.eventCenter.off('dishDataChanged', loadData);
+    };
   })
 
-  const handleCategoryClick = (categoryId: string | number) => {
+  const handleCategoryClick = (categoryId: string) => {
     setActiveCategory(categoryId)
     
     // 根据选中的分类筛选菜品

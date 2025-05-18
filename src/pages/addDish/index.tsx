@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image, Input, Button, Picker } from '@tarojs/components'
+import { View, Text, Image, Input, Button, Picker, Canvas } from '@tarojs/components'
 import { addDishAPI } from '../../services/menuService'
 import './index.scss'
 
@@ -55,21 +55,70 @@ export default function AddDish() {
     // setDishImage(generatedImageUrl)
   }
 
-  // 图片转 Base64
-  const imageToBase64 = (filePath: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      Taro.getFileSystemManager().readFile({
-        filePath: filePath,
-        encoding: 'base64',
-        success: (res) => {
-          resolve(res.data as string);
-        },
-        fail: (err) => {
-          console.error('Failed to read image file to base64', err);
-          reject(err);
-        }
+  // 压缩图片并转为Base64
+  const compressAndConvertToBase64 = async (filePath: string): Promise<string> => {
+    try {
+      // 1. 获取图片信息
+      const imageInfo = await Taro.getImageInfo({ src: filePath });
+      
+      // 2. 创建画布并设置为640x640
+      const canvasId = 'compressCanvas';
+      const ctx = Taro.createCanvasContext(canvasId);
+      
+      // 计算裁剪参数，保持图片比例并居中裁剪
+      const { width, height } = imageInfo;
+      let sourceX = 0, sourceY = 0, sourceWidth = width, sourceHeight = height;
+      
+      if (width > height) {
+        // 宽图，裁剪左右
+        sourceX = (width - height) / 2;
+        sourceWidth = height;
+      } else if (height > width) {
+        // 长图，裁剪上下
+        sourceY = (height - width) / 2;
+        sourceHeight = width;
+      }
+      
+      // 3. 绘制图片到画布上，实现裁剪
+      ctx.drawImage(filePath, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 640, 640);
+      await new Promise(resolve => ctx.draw(false, resolve));
+      
+      // 4. 从画布获取图片数据
+      const { tempFilePath } = await Taro.canvasToTempFilePath({
+        canvasId,
+        x: 0,
+        y: 0,
+        width: 640,
+        height: 640,
+        destWidth: 640,
+        destHeight: 640,
+        quality: 0.8, // 压缩质量
+        fileType: 'jpg'
       });
-    });
+      
+      // 5. 转为Base64
+      return new Promise((resolve, reject) => {
+        Taro.getFileSystemManager().readFile({
+          filePath: tempFilePath,
+          encoding: 'base64',
+          success: (res) => {
+            resolve(res.data as string);
+          },
+          fail: (err) => {
+            console.error('Failed to read compressed image to base64', err);
+            reject(err);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      throw error;
+    }
+  };
+  
+  // 兼容旧方法，保持向后兼容
+  const imageToBase64 = (filePath: string): Promise<string> => {
+    return compressAndConvertToBase64(filePath);
   };
 
   // 保存菜品信息
@@ -107,6 +156,8 @@ export default function AddDish() {
         icon: 'success',
         duration: 2000
       });
+      // 触发全局事件，通知主页刷新数据
+      Taro.eventCenter.trigger('dishDataChanged');
       // 保存成功后返回上一页
       Taro.navigateBack();
     } catch (error) {
@@ -163,6 +214,9 @@ export default function AddDish() {
           </View>
         </View>
       </View>
+      
+      {/* 隐藏的Canvas用于图片压缩 */}
+      <Canvas canvasId='compressCanvas' style='width: 640px; height: 640px; position: absolute; left: -9999px;' />
       
       <View className='add-dish__footer'>
         <Button className='add-dish__save-btn' onClick={handleSave}>保存</Button>

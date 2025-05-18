@@ -116,6 +116,8 @@ const CategoryManage: FC = () => {
         icon: 'success',
         duration: 2000
       });
+      // 触发全局事件，通知主页刷新数据
+      Taro.eventCenter.trigger('dishDataChanged');
       // 保存后返回上一页
       Taro.navigateBack();
     } catch (error) {

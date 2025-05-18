@@ -88,8 +88,6 @@ const DishItem: FC<DishItemProps> = ({ menusId, id, name, image, onAddClick }) =
         <View className='dish-item__add-btn' onClick={handleAddClick}>
           <Text className='dish-item__add-icon'>+</Text>
         </View>
-        {/* Delete Button - consider styling and placement */}
-        <Button size='mini' type='warn' className='dish-item__delete-btn' onClick={handleDeleteClick}>删除</Button>
       </View>
     </View>
   )
