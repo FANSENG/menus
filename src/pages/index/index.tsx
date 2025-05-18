@@ -9,8 +9,16 @@ import { getCombineInfo, Category, Dish, Menu } from '../../services/menuService
 import './index.scss'
 
 // 将Category接口转换为CategoryList组件需要的格式
-const convertCategories = (categories: Category[]) => {
-  return categories.map((category) => ({
+const convertCategories = (categories: string[] | Category[]) => {
+  // 处理字符串数组的情况
+  if (categories.length > 0 && typeof categories[0] === 'string') {
+    return (categories as string[]).map((categoryName) => ({
+      id: categoryName, // 使用分类名称作为ID
+      name: categoryName
+    }))
+  }
+  // 处理对象数组的情况
+  return (categories as Category[]).map((category) => ({
     id: category.name, // 使用分类名称作为ID
     name: category.name
   }))
@@ -23,7 +31,8 @@ const convertDishes = (dishes: Dish[], categoryName: string) => {
     .map((dish, index) => ({
       id: index + 1, // 使用索引作为临时ID
       name: dish.name,
-      image: dish.image || ''
+      // 处理图片URL中可能包含的反引号
+      image: dish.image ? dish.image.replace(/`/g, '') : ''
     }))
 }
 
@@ -38,7 +47,7 @@ export default function Index () {
   // 页面加载时获取数据
   useLoad(() => {
     // 调用getCombineInfo获取数据
-    const combineInfo = getCombineInfo(0)
+    const combineInfo = getCombineInfo(1)
     
     // 设置菜单信息
     // 等待异步结果后再设置菜单信息
@@ -57,7 +66,10 @@ export default function Index () {
         setActiveCategory(firstCategory)
         
         // 根据选中的分类筛选菜品
-        const firstCategoryName = info.categories[0].name
+        // 获取第一个分类名称，处理字符串数组或对象数组的情况
+        const firstCategoryName = typeof info.categories[0] === 'string' 
+          ? info.categories[0] 
+          : (info.categories[0] as Category).name
         const filteredDishes = convertDishes(info.dishes, firstCategoryName)
         setDishes(filteredDishes)
       }
@@ -75,6 +87,10 @@ export default function Index () {
     const selectedCategoryName = categories.find(c => c.id === categoryId)?.name || ''
     if (selectedCategoryName) {
       const filteredDishes = convertDishes(allDishes, selectedCategoryName)
+      setDishes(filteredDishes)
+    } else {
+      // 如果找不到分类名称，可能是因为categoryId本身就是分类名称（字符串数组的情况）
+      const filteredDishes = convertDishes(allDishes, categoryId as string)
       setDishes(filteredDishes)
     }
   }
@@ -124,6 +140,7 @@ export default function Index () {
       url: '/pages/categoryManage/index',
       success: function(res) {
         // 将当前分类数据传递给打开的页面
+        // 确保传递的是格式化后的分类数据，包含id和name属性
         res.eventChannel.emit('acceptCategories', { categories })
       }
     })

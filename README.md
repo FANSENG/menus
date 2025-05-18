@@ -136,3 +136,13 @@ const handleAddCategory = () => {
 - 所有数据都保存在本地存储中，没有后端服务
 - AI图片生成功能需要接入实际的AI服务才能使用
 - 确保在应用启动时调用 `initAppData` 函数初始化数据
+
+## How to Run
+
+1. Clone the repository: `git clone ow to Run
+
+2. Install dependencies: `npm install`
+
+3. Run the development server: `npm run dev:weapp`
+
+4. Open the project in the WeChat development tool.

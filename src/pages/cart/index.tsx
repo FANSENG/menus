@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Taro, { useLoad } from '@tarojs/taro'
 import TabBar from '../../components/TabBar'
 import CartItem from '../../components/CartItem'
@@ -18,7 +18,7 @@ export default function Cart() {
 
   useLoad(() => {
     // 获取当前菜单信息并设置导航栏标题
-    getCombineInfo(0).then(info => {
+    getCombineInfo(1).then(info => {
       const menuName = info.menu.name || '菜篮子'
       Taro.setNavigationBarTitle({
         title: menuName

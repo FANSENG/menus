@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, Input, Button, Picker } from '@tarojs/components'
+import { addDishAPI } from '../../services/menuService'
 import './index.scss'
 
 export default function AddDish() {
@@ -54,33 +55,69 @@ export default function AddDish() {
     // setDishImage(generatedImageUrl)
   }
 
+  // 图片转 Base64
+  const imageToBase64 = (filePath: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      Taro.getFileSystemManager().readFile({
+        filePath: filePath,
+        encoding: 'base64',
+        success: (res) => {
+          resolve(res.data as string);
+        },
+        fail: (err) => {
+          console.error('Failed to read image file to base64', err);
+          reject(err);
+        }
+      });
+    });
+  };
+
   // 保存菜品信息
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!dishName.trim()) {
-      Taro.showToast({
-        title: '请输入菜品名称',
-        icon: 'none',
-        duration: 2000
-      })
-      return
+      Taro.showToast({ title: '请输入菜品名称', icon: 'none', duration: 2000 });
+      return;
     }
-
     if (!dishImage) {
+      Taro.showToast({ title: '请上传或生成菜品图片', icon: 'none', duration: 2000 });
+      return;
+    }
+    // categoryName 默认为 '其他'
+    const currentCategoryName = categoryName || '其他';
+
+    try {
+      Taro.showLoading({ title: '保存中...' });
+      // 1. 图片转base64
+      // TODO: 图片压缩到 640x640 逻辑应在此处或 imageToBase64 内部实现
+      const base64Image = await imageToBase64(dishImage);
+
+      // 2. 调用API
+      // menusId 默认为 1
+      const menuId = 1;
+      await addDishAPI({
+        menusId: menuId,
+        name: dishName.trim(),
+        image: base64Image,
+        categoryName: currentCategoryName
+      });
+
+      Taro.hideLoading();
       Taro.showToast({
-        title: '请上传或生成菜品图片',
+        title: '菜品添加成功',
+        icon: 'success',
+        duration: 2000
+      });
+      // 保存成功后返回上一页
+      Taro.navigateBack();
+    } catch (error) {
+      Taro.hideLoading();
+      console.error('Failed to save dish:', error);
+      Taro.showToast({
+        title: error.message || '菜品添加失败',
         icon: 'none',
         duration: 2000
-      })
-      return
+      });
     }
-
-    // 这里预留保存菜品的接口调用
-    // 参数：菜品名称、图片、分类名称
-    // 返回：保存结果
-    console.log('保存菜品信息', { dishName, dishImage, categoryName })
-    
-    // 保存成功后返回上一页
-    Taro.navigateBack()
   }
 
   return (

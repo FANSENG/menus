@@ -22,7 +22,7 @@ const Header: FC<HeaderProps> = ({ menuName, menuImage, onAddClick }) => {
         })}
         >
           {menuImage ? (
-            <Image className='menu-header__image' src={menuImage} mode='aspectFill' />
+            <Image className='menu-header__image' src={menuImage.replace(/`/g, '')} mode='aspectFill' />
           ) : (
             <View className='menu-header__image-placeholder' />
           )}

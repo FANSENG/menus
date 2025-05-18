@@ -1,6 +1,7 @@
 import { FC, useState, useEffect } from 'react'
 import { View, Text, Button, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { saveCategoriesAPI } from '../../services/menuService'
 import './index.scss'
 
 interface Category {
@@ -103,12 +104,28 @@ const CategoryManage: FC = () => {
   }
 
   // 保存所有类别
-  const handleSave = () => {
-    // 这里应该调用API保存分类数据
-    console.log('保存分类数据', categories)
-    
-    // 保存后返回上一页
-    Taro.navigateBack()
+  const handleSave = async () => {
+    const categoryNames = categories.map(cat => cat.name);
+    // API_README: id当前默认传1，分类是一个string列表。要求必须有 其他 这个分类 (后端会自动添加“其他”)
+    try {
+      // TODO: Get current menu ID, defaulting to 1 for now as per requirement
+      const menuId = 1;
+      await saveCategoriesAPI(menuId, categoryNames);
+      Taro.showToast({
+        title: '分类保存成功',
+        icon: 'success',
+        duration: 2000
+      });
+      // 保存后返回上一页
+      Taro.navigateBack();
+    } catch (error) {
+      console.error('Failed to save categories:', error);
+      Taro.showToast({
+        title: error.message || '分类保存失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
   }
 
   // 返回上一页
